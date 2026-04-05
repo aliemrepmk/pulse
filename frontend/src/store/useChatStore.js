@@ -62,5 +62,24 @@ export const useChatStore = create((set, get) => ({
         socket.off("newMessage");
     },
 
+    subscribeToUserStatus: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.on("userWentOffline", ({ userId, lastSeen }) => {
+            set((state) => ({
+                users: state.users.map((user) => 
+                    user._id === userId ? { ...user, lastSeen } : user
+                ),
+                selectedUser: state.selectedUser?._id === userId 
+                    ? { ...state.selectedUser, lastSeen } 
+                    : state.selectedUser,
+            }));
+        });
+    },
+
+    unsubscribeFromUserStatus: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.off("userWentOffline");
+    },
+
     setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));

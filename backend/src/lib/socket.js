@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import mongoose from "mongoose";
+import User from "../models/user.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -33,10 +34,16 @@ io.on("connection", (socket) => {
 
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
         console.log("A user disconnected: " + socket.id);
         delete userSocketMap[userId];
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            const lastSeenTime = new Date();
+            await User.findByIdAndUpdate(userId, { lastSeen: lastSeenTime });
+            io.emit("userWentOffline", { userId, lastSeen: lastSeenTime });
+        }
     });
 });
 

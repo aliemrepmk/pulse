@@ -29,7 +29,7 @@ const App = () => {
   );
 
   return (
-    <div data-theme={theme}>
+    <div data-theme={theme} className="bg-base-100 text-base-content min-h-screen">
       <Navbar />
 
       <Routes>

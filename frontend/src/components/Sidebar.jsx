@@ -3,15 +3,18 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users } from "lucide-react";
+import { formatLastSeen } from "../lib/utils";
 
 const Sidebar = () => {
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToUserStatus, unsubscribeFromUserStatus } = useChatStore();
     const { onlineUsers } = useAuthStore();
     const [ showOnlineOnly, setShowOnlineOnly ] = useState(false);
 
     useEffect(() => {
-        getUsers()
-    }, [getUsers]);
+        getUsers();
+        subscribeToUserStatus();
+        return () => unsubscribeFromUserStatus();
+    }, [getUsers, subscribeToUserStatus, unsubscribeFromUserStatus]);
 
     const filteredUsers = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;
 
@@ -68,7 +71,7 @@ const Sidebar = () => {
                     <div className="hidden lg:block text-left min-w-0">
                         <div className="font-medium truncate">{user.fullName}</div>
                         <div className="text-sm text-zinc-400">
-                            {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                            {onlineUsers.includes(user._id) ? "Online" : (user.lastSeen ? `Last seen ${formatLastSeen(user.lastSeen).toLowerCase()}` : "Offline")}
                         </div>
                     </div>
                 </button>
