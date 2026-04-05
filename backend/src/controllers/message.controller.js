@@ -82,3 +82,40 @@ export const sendMessage = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const editMessage = async (req, res) => {
+    try {
+        const { text } = req.body;
+        const { id: messageId } = req.params;
+        const senderId = req.user._id;
+
+        if (!text?.trim()) {
+            return res.status(400).json({ error: "Message text cannot be empty." });
+        }
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.senderId.toString() !== senderId.toString()) {
+            return res.status(403).json({ error: "Unauthorized to edit this message" });
+        }
+
+        message.text = text.trim();
+        message.isEdited = true;
+        
+        await message.save();
+
+        const receiverSocketId = getReceiverSocketId(message.receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("updateMessage", message);
+        }
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.log("Error in editMessage controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

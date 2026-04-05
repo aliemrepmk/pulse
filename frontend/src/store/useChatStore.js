@@ -8,6 +8,7 @@ export const useChatStore = create((set, get) => ({
     users: [],
     typingUsers: [],
     selectedUser: null,
+    editingMessage: null,
     isUsersLoading: false,
     isMessagesLoading: false,
 
@@ -45,6 +46,19 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    editMessage: async (messageId, messageData) => {
+        try {
+            const res = await axiosInstance.put(`/messages/edit/${messageId}`, messageData);
+            set((state) => ({
+                messages: state.messages.map((m) => m._id === messageId ? res.data : m),
+                editingMessage: null,
+            }));
+            toast.success("Message edited successfully");
+        } catch (error) {
+            toast.error(error.response?.data?.error || "Failed to edit message.");
+        }
+    },
+
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if(!selectedUser) return;
@@ -56,11 +70,19 @@ export const useChatStore = create((set, get) => ({
                 messages: [...get().messages, newMessage],
             });
         });
+
+        socket.on("updateMessage", (updatedMessage) => {
+            if(updatedMessage.senderId !== selectedUser._id && updatedMessage.receiverId !== selectedUser._id) return;
+            set({
+                messages: get().messages.map((m) => m._id === updatedMessage._id ? updatedMessage : m),
+            });
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
+        socket.off("updateMessage");
     },
 
     subscribeToUserStatus: () => {
@@ -105,5 +127,6 @@ export const useChatStore = create((set, get) => ({
         socket.off("stopTyping");
     },
 
+    setEditingMessage: (message) => set({ editingMessage: message }),
     setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));

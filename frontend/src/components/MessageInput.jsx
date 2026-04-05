@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X } from "lucide-react";
@@ -9,8 +9,17 @@ const MessageInput = () => {
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
     const typingTimeoutRef = useRef(null);
-    const { sendMessage, selectedUser } = useChatStore();
+    const { sendMessage, editMessage, selectedUser, editingMessage, setEditingMessage } = useChatStore();
     const { socket } = useAuthStore();
+
+    useEffect(() => {
+        if (editingMessage) {
+            setText(editingMessage.text || "");
+            setImagePreview(null);
+        } else {
+            setText("");
+        }
+    }, [editingMessage]);
 
     const MAX_FILE_SIZE_MB = 5;
 
@@ -46,10 +55,15 @@ const MessageInput = () => {
         if (!text.trim() && !imagePreview) return;
 
         try {
-            await sendMessage({
-                text: text.trim(),
-                image: imagePreview,
-            });
+            if (editingMessage) {
+                await editMessage(editingMessage._id, { text: text.trim() });
+                setEditingMessage(null);
+            } else {
+                await sendMessage({
+                    text: text.trim(),
+                    image: imagePreview,
+                });
+            }
 
             // Clear form
             setText("");
@@ -80,8 +94,16 @@ const MessageInput = () => {
     };
 
     return (
-        <div className="p-4 w-full">
-          {imagePreview && (
+        <div className="p-4 w-full relative">
+          {editingMessage && (
+            <div className="absolute -top-6 left-4 right-4 flex items-center justify-between text-xs text-zinc-400 bg-base-300 px-3 py-1 rounded-t-lg">
+                <span>Editing message...</span>
+                <button type="button" onClick={() => setEditingMessage(null)} className="hover:text-base-content">
+                    Cancel
+                </button>
+            </div>
+          )}
+          {imagePreview && !editingMessage && (
             <div className="mb-3 flex items-center gap-2">
               <div className="relative">
                 <img
@@ -121,8 +143,10 @@ const MessageInput = () => {
               <button
                 type="button"
                 className={`hidden sm:flex btn btn-circle
-                         ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
-                onClick={() => fileInputRef.current?.click()}
+                         ${imagePreview ? "text-emerald-500" : "text-zinc-400"} 
+                         ${editingMessage ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => !editingMessage && fileInputRef.current?.click()}
+                disabled={!!editingMessage}
               >
                 <Image size={20} />
               </button>
