@@ -6,15 +6,19 @@ import { Users } from "lucide-react";
 import { formatLastSeen } from "../lib/utils";
 
 const Sidebar = () => {
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToUserStatus, unsubscribeFromUserStatus } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToUserStatus, unsubscribeFromUserStatus, subscribeToTypingStatus, unsubscribeFromTypingStatus } = useChatStore();
     const { onlineUsers } = useAuthStore();
     const [ showOnlineOnly, setShowOnlineOnly ] = useState(false);
 
     useEffect(() => {
         getUsers();
         subscribeToUserStatus();
-        return () => unsubscribeFromUserStatus();
-    }, [getUsers, subscribeToUserStatus, unsubscribeFromUserStatus]);
+        subscribeToTypingStatus();
+        return () => {
+            unsubscribeFromUserStatus();
+            unsubscribeFromTypingStatus();
+        };
+    }, [getUsers, subscribeToUserStatus, unsubscribeFromUserStatus, subscribeToTypingStatus, unsubscribeFromTypingStatus]);
 
     const filteredUsers = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;
 

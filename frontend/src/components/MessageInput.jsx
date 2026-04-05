@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -7,7 +8,9 @@ const MessageInput = () => {
     const [text, setText] = useState("");
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
-    const { sendMessage } = useChatStore();
+    const typingTimeoutRef = useRef(null);
+    const { sendMessage, selectedUser } = useChatStore();
+    const { socket } = useAuthStore();
 
     const MAX_FILE_SIZE_MB = 5;
 
@@ -52,8 +55,27 @@ const MessageInput = () => {
             setText("");
             setImagePreview(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
+            
+            // Cleanup typing status when message is sent
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            if (socket && selectedUser) {
+                socket.emit("stopTyping", { receiverId: selectedUser._id });
+            }
         } catch (error) {
             console.error("Failed to send message:", error);
+        }
+    };
+
+    const handleTextChange = (e) => {
+        setText(e.target.value);
+        if (socket && selectedUser) {
+            socket.emit("typing", { receiverId: selectedUser._id });
+
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            
+            typingTimeoutRef.current = setTimeout(() => {
+                socket.emit("stopTyping", { receiverId: selectedUser._id });
+            }, 2000);
         }
     };
 
@@ -86,7 +108,7 @@ const MessageInput = () => {
                 className="w-full input input-bordered rounded-lg input-sm sm:input-md"
                 placeholder="Type a message..."
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={handleTextChange}
               />
               <input
                 type="file"

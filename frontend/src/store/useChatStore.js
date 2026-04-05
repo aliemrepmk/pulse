@@ -6,6 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
     messages: [],
     users: [],
+    typingUsers: [],
     selectedUser: null,
     isUsersLoading: false,
     isMessagesLoading: false,
@@ -79,6 +80,29 @@ export const useChatStore = create((set, get) => ({
     unsubscribeFromUserStatus: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("userWentOffline");
+    },
+
+    subscribeToTypingStatus: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.on("typing", ({ userId }) => {
+            set((state) => ({
+                typingUsers: state.typingUsers.includes(userId) 
+                    ? state.typingUsers 
+                    : [...state.typingUsers, userId],
+            }));
+        });
+
+        socket.on("stopTyping", ({ userId }) => {
+            set((state) => ({
+                typingUsers: state.typingUsers.filter((id) => id !== userId),
+            }));
+        });
+    },
+
+    unsubscribeFromTypingStatus: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.off("typing");
+        socket.off("stopTyping");
     },
 
     setSelectedUser: (selectedUser) => set({ selectedUser }),
