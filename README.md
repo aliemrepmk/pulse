@@ -172,3 +172,23 @@ pulse/
 - Client-side file size enforced at **5 MB** before any upload
 
 ---
+
+## Roadmap & Features
+
+- [x] **Core Chat functionality** (Text & Image Attachments).
+- [x] **Authentication System** (JWT, Registration).
+- [x] **Responsive Theme Ecosystem** (32 DaisyUI themes).
+- [x] **Live User States:** Real-time visibility tracking (Online/Offline).
+- [x] **"Last Seen" Tracker:** Web-socket powered exact disconnect timestamps.
+- [x] **Dynamic Typing Indicators:** Live-debounced keystroke status relays.
+- [x] **Message Editing:** Modify sent messages with an `(edited)` live sync.
+- [x] **Read Receipts (Message Status):** 3-tier checking system (`Sent`, `Delivered`, `Read`).
+- [ ] **Sidebar Unread Counters:** Displaying numeric red badges `(3)` next to offline alerts.
+- [ ] **Delete Messages:** Local and global database message deletion endpoints.
+- [ ] **Message Pagination / Infinite Scroll:** Fetching older messages incrementally to save resources.
+- [ ] **Reply Targeting:** Anchor a reply contextually to a specific previous message.
+- [ ] **Emoji Reactions:** Interactive bubble reactions.
+- [ ] **Push Notifications:** Native OS notifications for backgrounded browser tabs.
+- [ ] **Group Chats:** Expanding the underlying schema to support multi-user threads.
+
+---

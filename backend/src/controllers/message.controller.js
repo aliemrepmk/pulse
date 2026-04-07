@@ -61,17 +61,18 @@ export const sendMessage = async (req, res) => {
             imageUrl = uploadResponse.secure_url;
         }
 
+        const receiverSocketId = getReceiverSocketId(receiverId);
+
         const newMessage = new Message({
             senderId,
             receiverId,
             text: text?.trim(),
             image: imageUrl,
+            status: receiverSocketId ? "delivered" : "sent",
         });
 
         await newMessage.save();
 
-        // Real-time delivery via Socket.io
-        const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
@@ -116,6 +117,28 @@ export const editMessage = async (req, res) => {
         res.status(200).json(message);
     } catch (error) {
         console.log("Error in editMessage controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const markMessagesAsRead = async (req, res) => {
+    try {
+        const { senderId } = req.params;
+        const receiverId = req.user._id;
+
+        await Message.updateMany(
+            { senderId, receiverId, status: { $ne: "read" } },
+            { $set: { status: "read" } }
+        );
+
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("messagesRead", { senderId, receiverId });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.log("Error in markMessagesAsRead controller: " + error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

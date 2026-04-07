@@ -3,6 +3,7 @@ import http from "http";
 import express from "express";
 import mongoose from "mongoose";
 import User from "../models/user.model.js";
+import Message from "../models/message.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +31,30 @@ io.on("connection", (socket) => {
     // to prevent map pollution from arbitrary/malformed query params
     if (userId && mongoose.Types.ObjectId.isValid(userId)) {
         userSocketMap[userId] = socket.id;
+        
+        // Immediately update any pending \"sent\" messages to \"delivered\" for this user
+        (async () => {
+            try {
+                const undeliveredMessages = await Message.find({ receiverId: userId, status: "sent" });
+                if (undeliveredMessages.length > 0) {
+                    await Message.updateMany(
+                        { receiverId: userId, status: "sent" },
+                        { $set: { status: "delivered" } }
+                    );
+
+                    // Notify each unique sender
+                    const senderIds = [...new Set(undeliveredMessages.map(m => m.senderId.toString()))];
+                    senderIds.forEach((senderId) => {
+                        const senderSocketId = getReceiverSocketId(senderId);
+                        if (senderSocketId) {
+                            io.to(senderSocketId).emit("messagesDelivered", { receiverId: userId });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.log("Error sweeping delivered messages:", error);
+            }
+        })();
     }
 
     io.emit("getOnlineUsers", Object.keys(userSocketMap));

@@ -59,6 +59,19 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    markMessagesAsRead: async (senderId) => {
+        try {
+            await axiosInstance.put(`/messages/mark-read/${senderId}`);
+            set((state) => ({
+                messages: state.messages.map((m) => 
+                    (m.senderId === senderId && m.status !== "read") ? { ...m, status: "read" } : m
+                ),
+            }));
+        } catch (error) {
+            console.error("Failed to mark messages as read:", error);
+        }
+    },
+
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if(!selectedUser) return;
@@ -77,12 +90,35 @@ export const useChatStore = create((set, get) => ({
                 messages: get().messages.map((m) => m._id === updatedMessage._id ? updatedMessage : m),
             });
         });
+
+        socket.on("messagesRead", ({ senderId, receiverId }) => {
+            set((state) => ({
+                messages: state.messages.map((m) => 
+                    (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status !== "read") 
+                        ? { ...m, status: "read" } 
+                        : m
+                ),
+            }));
+        });
+
+        socket.on("messagesDelivered", ({ receiverId }) => {
+            set((state) => ({
+                messages: state.messages.map((m) => 
+                    // If we sent it and it hasn't been read...
+                    (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status === "sent")
+                        ? { ...m, status: "delivered" }
+                        : m
+                ),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
         socket.off("updateMessage");
+        socket.off("messagesRead");
+        socket.off("messagesDelivered");
     },
 
     subscribeToUserStatus: () => {

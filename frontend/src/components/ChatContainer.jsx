@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Pencil } from "lucide-react";
+import { Pencil, Check, CheckCheck } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -9,7 +9,7 @@ import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
-    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage } = useChatStore();
+    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
 
@@ -20,6 +20,16 @@ const ChatContainer = () => {
 
         return () => unsubscribeFromMessages();
     }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+
+    // automatically mark incoming messages as read if the chat is open
+    useEffect(() => {
+        if (messages && messages.length > 0) {
+            const hasUnread = messages.some(m => m.senderId === selectedUser._id && m.status !== "read");
+            if (hasUnread) {
+                markMessagesAsRead(selectedUser._id);
+            }
+        }
+    }, [messages, selectedUser._id, markMessagesAsRead]);
 
     // scroll automatically for new messages in real time
     useEffect(() => {
@@ -64,6 +74,17 @@ const ChatContainer = () => {
                             </time>
                             {message.isEdited && (
                                 <span className="text-[10px] opacity-40 italic mt-0.5">(edited)</span>
+                            )}
+                            {message.senderId === authUser._id && (
+                                <span className="ml-1 mt-0.5" title={message.status}>
+                                    {message.status === "read" ? (
+                                        <CheckCheck size={14} className="text-emerald-500" />
+                                    ) : message.status === "delivered" ? (
+                                        <CheckCheck size={14} className="text-zinc-400" />
+                                    ) : (
+                                        <Check size={14} className="text-zinc-400" />
+                                    )}
+                                </span>
                             )}
                             {message.senderId === authUser._id && (
                                 <button 
