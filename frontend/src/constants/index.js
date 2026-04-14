@@ -1,3 +1,4 @@
+// All DaisyUI themes available to the user on the Settings page
 export const THEMES = [
     "light",
     "dark",

@@ -29,7 +29,7 @@ const AuthImagePattern = ({ title, subtitle }) => {
             `}</style>
 
             <div className="max-w-sm text-center">
-                {/* ── Animated visualisation ───────────────────── */}
+                {/* Animated hero section — pulse rings, centre orb, and floating chat bubbles */}
                 <div
                     className="relative flex items-center justify-center mb-10"
                     style={{ height: "260px" }}
@@ -76,7 +76,7 @@ const AuthImagePattern = ({ title, subtitle }) => {
                         </div>
                     </div>
 
-                    {/* ── Floating chat bubbles ─────────────────── */}
+                    {/* Floating chat bubbles that drift around the centre orb */}
 
                     {/* Top-right — incoming */}
                     <div
@@ -118,7 +118,7 @@ const AuthImagePattern = ({ title, subtitle }) => {
                         <span className="text-primary font-bold">✓✓</span> Seen
                     </div>
 
-                    {/* ── Accent dots ───────────────────────────── */}
+                    {/* Small accent dots scattered around to add depth to the animation */}
                     <div
                         className="absolute top-[7%] left-[24%] w-2 h-2 rounded-full bg-primary/50"
                         style={{ animation: "float-a 3s ease-in-out infinite" }}
@@ -139,7 +139,7 @@ const AuthImagePattern = ({ title, subtitle }) => {
                     />
                 </div>
 
-                {/* ── Text ─────────────────────────────────────── */}
+                {/* Title and subtitle passed in as props from the login/signup page */}
                 <h2 className="text-2xl font-bold mb-4">{title}</h2>
                 <p className="text-base-content/60">{subtitle}</p>
             </div>

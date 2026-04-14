@@ -13,7 +13,8 @@ const ProfilePage = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Reject files over 5 MB before encoding to prevent browser freeze & payload abuse
+        // Bail out before encoding if the image is too large — base64 encoding a huge file
+        // can lock up the browser tab and send a payload the server will reject anyway
         if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
             toast.error(`Profile picture must be smaller than ${MAX_FILE_SIZE_MB} MB`);
             return;
@@ -39,7 +40,8 @@ const ProfilePage = () => {
                         <p className="mt-2">Your profile information</p>
                     </div>
 
-                    {/* avatar upload section */}
+                    {/* Photo upload — clicking the camera icon opens the file picker,
+                        and the image is uploaded to Cloudinary immediately on selection */}
                     <div className="flex flex-col items-center gap-4">
                         <div className="relative">
                             <img
@@ -58,9 +60,9 @@ const ProfilePage = () => {
                                     ${isUpdatingProfile ? "animate-pulse pointer-events-none" : ""}
                                 `}
                             >
-
                                 <Camera className="w-5 h-5 text-base-200" />
 
+                                {/* Disable the input while an upload is in progress to prevent double-submits */}
                                 <input
                                     type="file"
                                     id="avatar-upload"

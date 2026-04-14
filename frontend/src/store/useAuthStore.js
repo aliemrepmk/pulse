@@ -10,6 +10,7 @@ export const useAuthStore = create((set, get) => ({
     isSigningUp: false,
     isLoggingIn: false,
     isUpdatingProfile: false,
+    // Start as true so the app waits for the auth check before rendering any routes
     isCheckingAuth: true,
     onlineUsers: [],
     socket: null,
@@ -19,6 +20,7 @@ export const useAuthStore = create((set, get) => ({
             const res = await axiosInstance.get("/auth/check");
             set({ authUser: res.data });
 
+            // Open the socket connection as soon as we confirm the session is still valid
             get().connectSocket();
         } catch (error) {
             console.log("Error in checkAuth:", error);
@@ -35,6 +37,7 @@ export const useAuthStore = create((set, get) => ({
             set({ authUser: res.data });
             toast.success("Account created successfully");
 
+            // Connect immediately so the user lands on the home page already online
             get().connectSocket();
         } catch (error) {
             toast.error(error.response?.data?.message || "Signup failed. Please try again.");
@@ -49,6 +52,7 @@ export const useAuthStore = create((set, get) => ({
             set({ authUser: res.data });
             toast.success("Logged in successfully");
 
+            // Connect immediately so the user shows as online the moment they log in
             get().connectSocket();
         } catch (error) {
             toast.error(error.response?.data?.message || "Login failed. Please try again.");
@@ -62,6 +66,7 @@ export const useAuthStore = create((set, get) => ({
             set({ authUser: null });
             toast.success("Logged out successfully");
 
+            // Close the socket so we stop receiving real-time events after logging out
             get().disconnectSocket();
         } catch (error) {
             toast.error(error.response?.data?.message || "Logout failed.");
@@ -82,6 +87,7 @@ export const useAuthStore = create((set, get) => ({
 
     connectSocket: () => {
         const { authUser } = get();
+        // Skip if there's no logged in user or a connection is already open
         if(!authUser || get().socket?.connected) return;
 
         const socket = io(BASE_URL, {
@@ -92,12 +98,15 @@ export const useAuthStore = create((set, get) => ({
         socket.connect();
 
         set({ socket: socket});
+
+        // Keep the online users list in sync whenever the server broadcasts a change
         socket.on("getOnlineUsers", (userIds) => {
             set({ onlineUsers: userIds});
         });
     },
 
     disconnectSocket: () => {
+        // Only attempt to disconnect if a socket is actually connected
         if (get().socket?.connected) get().socket.disconnect();
     },
 }));

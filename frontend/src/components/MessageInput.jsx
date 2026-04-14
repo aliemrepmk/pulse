@@ -12,6 +12,8 @@ const MessageInput = () => {
     const { sendMessage, editMessage, selectedUser, editingMessage, setEditingMessage } = useChatStore();
     const { socket } = useAuthStore();
 
+    // When the user clicks edit on a message, pre-fill the input with its current text
+    // and clear any image preview so the editing state is clean
     useEffect(() => {
         if (editingMessage) {
             setText(editingMessage.text || "");
@@ -30,7 +32,8 @@ const MessageInput = () => {
             return;
         }
 
-        // Reject files over 5 MB before encoding to prevent browser freeze & payload abuse
+        // Bail out before encoding if the image is too large — base64 encoding a huge file
+        // can lock up the browser tab and send a payload the server will reject anyway
         if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
             toast.error(`Image must be smaller than ${MAX_FILE_SIZE_MB} MB`);
             if (fileInputRef.current) fileInputRef.current.value = "";
@@ -65,12 +68,13 @@ const MessageInput = () => {
                 });
             }
 
-            // Clear form
+            // Reset the form back to its empty state
             setText("");
             setImagePreview(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
-            
-            // Cleanup typing status when message is sent
+
+            // Cancel any pending stopTyping timer and notify the other person right away,
+            // so the "Typing..." indicator disappears the moment the message is sent
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             if (socket && selectedUser) {
                 socket.emit("stopTyping", { receiverId: selectedUser._id });
@@ -83,10 +87,11 @@ const MessageInput = () => {
     const handleTextChange = (e) => {
         setText(e.target.value);
         if (socket && selectedUser) {
+            // Let the other person know we're typing
             socket.emit("typing", { receiverId: selectedUser._id });
 
+            // Reset the timer each keystroke — stopTyping fires 2 s after the user pauses
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            
             typingTimeoutRef.current = setTimeout(() => {
                 socket.emit("stopTyping", { receiverId: selectedUser._id });
             }, 2000);
@@ -95,6 +100,7 @@ const MessageInput = () => {
 
     return (
         <div className="p-4 w-full relative">
+          {/* Banner that appears above the input when the user is editing an existing message */}
           {editingMessage && (
             <div className="absolute -top-6 left-4 right-4 flex items-center justify-between text-xs text-zinc-400 bg-base-300 px-3 py-1 rounded-t-lg">
                 <span>Editing message...</span>
@@ -103,6 +109,7 @@ const MessageInput = () => {
                 </button>
             </div>
           )}
+          {/* Thumbnail preview of the selected image — hidden while editing text */}
           {imagePreview && !editingMessage && (
             <div className="mb-3 flex items-center gap-2">
               <div className="relative">

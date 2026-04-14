@@ -16,6 +16,9 @@ const SignUpPage = () => {
 
     const { signup, isSigningUp } = useAuthStore();
 
+    // Runs quick client-side checks and shows a toast for the first problem found.
+    // Returns true only when everything looks good — the caller treats any other
+    // return value (including undefined) as a failure.
     const validateForm = () => {
         if (!formData.fullName.trim()) return toast.error("Full name is required");
         if (!formData.email.trim()) return toast.error("Email is required");
@@ -35,10 +38,10 @@ const SignUpPage = () => {
     };
 
     return <div className="min-h-screen grid lg:grid-cols-2">
-        {/* Left side */}
+        {/* Sign-up form — takes up the full screen on mobile, left half on desktop */}
         <div className="flex flex-col justify-center items-center p-6 sm:p-12">
             <div className="w-full max-w-md space-y-8">
-                {/* Logo */}
+                {/* App icon and page heading */}
                 <div className="text-center mb-8">
                     <div className="flex flex-col items-center gap-2 group">
                         <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -99,6 +102,7 @@ const SignUpPage = () => {
                                 className="shrink-0"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
+                                {/* Toggle between showing and hiding the password */}
                                 {showPassword ? (
                                     <EyeOff className="h-4 w-4 text-base-content/40" />
                                 ) : (
@@ -131,7 +135,7 @@ const SignUpPage = () => {
             </div>
         </div>
 
-        {/* Right side */}
+        {/* Animated illustration panel — hidden on small screens */}
         <AuthImagePattern
             title="Join our community"
             subtitle="Connect with friends, share moments, and stay in touch with your loved ones."

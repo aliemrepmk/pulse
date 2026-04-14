@@ -13,7 +13,7 @@ const ChatContainer = () => {
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
 
-    // listen for new messages in real time
+    // Load the conversation and start listening for new messages whenever the selected user changes
     useEffect(() => {
         getMessages(selectedUser._id);
         subscribeToMessages();
@@ -21,7 +21,7 @@ const ChatContainer = () => {
         return () => unsubscribeFromMessages();
     }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
-    // automatically mark incoming messages as read if the chat is open
+    // As long as this chat is open, immediately mark any unread messages from the other person as read
     useEffect(() => {
         if (messages && messages.length > 0) {
             const hasUnread = messages.some(m => m.senderId === selectedUser._id && m.status !== "read");
@@ -31,7 +31,7 @@ const ChatContainer = () => {
         }
     }, [messages, selectedUser._id, markMessagesAsRead]);
 
-    // scroll automatically for new messages in real time
+    // Scroll to the bottom every time a new message arrives so the user always sees the latest one
     useEffect(() => {
         if(messageEndRef.current && messages) {
             messageEndRef.current.scrollIntoView({ behavior: "smooth"});
@@ -75,6 +75,7 @@ const ChatContainer = () => {
                             {message.isEdited && (
                                 <span className="text-[10px] opacity-40 italic mt-0.5">(edited)</span>
                             )}
+                            {/* Green double-check = read, grey double-check = delivered, single-check = sent */}
                             {message.senderId === authUser._id && (
                                 <span className="ml-1 mt-0.5" title={message.status}>
                                     {message.status === "read" ? (
@@ -86,6 +87,7 @@ const ChatContainer = () => {
                                     )}
                                 </span>
                             )}
+                            {/* Edit button stays hidden until the user hovers over the message */}
                             {message.senderId === authUser._id && (
                                 <button 
                                     onClick={() => setEditingMessage(message)}
@@ -109,7 +111,7 @@ const ChatContainer = () => {
                         </div>
                     </div>
                 ))}
-                {/* Sentinel element — scroll target for new messages */}
+                {/* Empty div at the bottom so we can scroll here when a new message arrives */}
                 <div ref={messageEndRef} />
             </div>
             <MessageInput />

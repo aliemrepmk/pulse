@@ -10,6 +10,8 @@ const Sidebar = () => {
     const { onlineUsers } = useAuthStore();
     const [ showOnlineOnly, setShowOnlineOnly ] = useState(false);
 
+    // Load the user list and start listening for "went offline" and "typing" events
+    // as soon as the sidebar mounts
     useEffect(() => {
         getUsers();
         subscribeToUserStatus();
@@ -20,6 +22,7 @@ const Sidebar = () => {
         };
     }, [getUsers, subscribeToUserStatus, unsubscribeFromUserStatus, subscribeToTypingStatus, unsubscribeFromTypingStatus]);
 
+    // When the "show online only" checkbox is ticked, hide everyone who isn't currently connected
     const filteredUsers = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;
 
     if(isUsersLoading) return <SidebarSkeleton />
@@ -42,6 +45,7 @@ const Sidebar = () => {
                         />
                         <span className="text-sm">Show online only</span>
                     </label>
+                    {/* Subtract 1 to exclude ourselves from the online count */}
                     <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
                 </div>
             </div>
@@ -71,7 +75,7 @@ const Sidebar = () => {
                         )}
                     </div>
 
-                    {/* User info - only visible on larger screens */}
+                    {/* Name and online/offline status — hidden on small screens where only the avatar fits */}
                     <div className="hidden lg:block text-left min-w-0">
                         <div className="font-medium truncate">{user.fullName}</div>
                         <div className="text-sm text-zinc-400">

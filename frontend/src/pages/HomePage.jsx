@@ -13,6 +13,7 @@ const HomePage = () => {
                 <div className="bg-base-100 rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
                     <div className="flex h-full rounded-lg overflow-hidden">
                         <Sidebar />
+                        {/* Show a welcome placeholder until the user picks someone to chat with */}
                         {!selectedUser ? <NoChatSelected /> : <ChatContainer />}
                     </div>
                 </div>

@@ -24,6 +24,7 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    // Fetch the full conversation history for a given user
     getMessages: async (userId) => {
         set({ isMessagesLoading: true });
         try {
@@ -59,6 +60,7 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    // Flip every sent/delivered message from this sender to "read" and update local state
     markMessagesAsRead: async (senderId) => {
         try {
             await axiosInstance.put(`/messages/mark-read/${senderId}`);
@@ -72,11 +74,15 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    // Start listening for real-time message events for the currently open conversation.
+    // Must only be called after selectedUser is set, otherwise we'd process every
+    // incoming message regardless of who sent it.
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if(!selectedUser) return;
 
         const socket = useAuthStore.getState().socket;
+        // Only add to the list if the message is from the person we're currently chatting with
         socket.on("newMessage", (newMessage) => {
             if(newMessage.senderId !== selectedUser._id) return;
             set({ 
@@ -84,6 +90,7 @@ export const useChatStore = create((set, get) => ({
             });
         });
 
+        // Handle in-place edits — update the matching message bubble without re-fetching
         socket.on("updateMessage", (updatedMessage) => {
             if(updatedMessage.senderId !== selectedUser._id && updatedMessage.receiverId !== selectedUser._id) return;
             set({
@@ -91,6 +98,7 @@ export const useChatStore = create((set, get) => ({
             });
         });
 
+        // The other person opened our conversation — flip our sent messages to "read"
         socket.on("messagesRead", ({ senderId, receiverId }) => {
             set((state) => ({
                 messages: state.messages.map((m) => 
@@ -101,10 +109,11 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
+        // The other person came online and picked up our messages — upgrade "sent" to "delivered"
         socket.on("messagesDelivered", ({ receiverId }) => {
             set((state) => ({
                 messages: state.messages.map((m) => 
-                    // If we sent it and it hasn't been read...
+                    // If we sent it and it hasn't been read yet, mark it as delivered
                     (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status === "sent")
                         ? { ...m, status: "delivered" }
                         : m
@@ -113,6 +122,7 @@ export const useChatStore = create((set, get) => ({
         });
     },
 
+    // Tear down all message listeners when leaving the current conversation
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
@@ -121,6 +131,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("messagesDelivered");
     },
 
+    // Keep the contact list up to date when someone goes offline
     subscribeToUserStatus: () => {
         const socket = useAuthStore.getState().socket;
         socket.on("userWentOffline", ({ userId, lastSeen }) => {
@@ -140,6 +151,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("userWentOffline");
     },
 
+    // Track which users are currently typing so the "Typing..." indicator can appear
     subscribeToTypingStatus: () => {
         const socket = useAuthStore.getState().socket;
         socket.on("typing", ({ userId }) => {
