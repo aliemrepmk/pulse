@@ -10,9 +10,10 @@ export const protectRoute = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         if (!decoded) {
-            return res.status(401).json({ message: "Unauthorized: Invalid token" }); // fixed message
+            return res.status(401).json({ message: "Unauthorized: Invalid token" });
         }
 
+        // Never expose the password hash, even to verified users
         const user = await User.findById(decoded.userId).select("-password");
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -21,7 +22,7 @@ export const protectRoute = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        // jwt.verify throws for invalid/expired tokens — give a meaningful 401, not a 500
+        // jwt.verify throws for expired or tampered tokens — send a clear 401 instead of a generic 500
         if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
             return res.status(401).json({ message: "Unauthorized: Invalid or expired token" });
         }

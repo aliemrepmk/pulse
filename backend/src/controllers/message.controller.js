@@ -3,13 +3,15 @@ import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
-// Helper: validates a base64 data URL is an image
+// Rejects anything that isn't a base64 data URL — prevents SSRF by ensuring we only
+// upload user-provided data, never a remote URL we'd be proxying to Cloudinary
 const isValidBase64Image = (str) =>
     typeof str === "string" && /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(str);
 
 export const getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
+        // Exclude the logged-in user from the list so they can't message themselves
         const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
         res.status(200).json(filteredUsers);
     } catch (error) {
@@ -63,6 +65,8 @@ export const sendMessage = async (req, res) => {
 
         const receiverSocketId = getReceiverSocketId(receiverId);
 
+        // If the recipient is currently online, set status to "delivered" right away;
+        // otherwise it stays "sent" and gets upgraded when they next connect
         const newMessage = new Message({
             senderId,
             receiverId,
@@ -100,6 +104,7 @@ export const editMessage = async (req, res) => {
             return res.status(404).json({ error: "Message not found" });
         }
 
+        // Make sure only the original sender can edit their own message
         if (message.senderId.toString() !== senderId.toString()) {
             return res.status(403).json({ error: "Unauthorized to edit this message" });
         }
@@ -131,6 +136,7 @@ export const markMessagesAsRead = async (req, res) => {
             { $set: { status: "read" } }
         );
 
+        // Notify the original sender in real time so their checkmarks update without a page refresh
         const senderSocketId = getReceiverSocketId(senderId);
         if (senderSocketId) {
             io.to(senderSocketId).emit("messagesRead", { senderId, receiverId });

@@ -3,12 +3,13 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
-// Helper: validates a base64 data URL is an image
+// Rejects anything that isn't a base64 data URL for an image — prevents SSRF by ensuring
+// we only ever upload user-provided data, never a remote URL we'd be proxying
 const isValidBase64Image = (str) =>
     typeof str === "string" && /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(str);
 
 export const signup = async (req, res) => {
-    // Normalise email: trim whitespace and lowercase
+    // Normalise the email so "User@Mail.com" and "user@mail.com" are treated as the same account
     const { fullName, email: rawEmail, password } = req.body;
     const email = rawEmail?.trim().toLowerCase();
 
@@ -35,9 +36,11 @@ export const signup = async (req, res) => {
         });
 
         if (newUser) {
+            // Issue the token before saving so the user is logged in the moment the account is created
             generateToken(newUser.id, res);
             await newUser.save();
 
+            // Only return safe fields — never include the hashed password in a response
             res.status(201).json({
                 _id: newUser._id,
                 fullName: newUser.fullName,
@@ -54,7 +57,7 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    // Normalise email on login to match stored value
+    // Normalise the email on login to match however it was stored at signup
     const { email: rawEmail, password } = req.body;
     const email = rawEmail?.trim().toLowerCase();
 
@@ -71,6 +74,7 @@ export const login = async (req, res) => {
 
         generateToken(user._id, res);
 
+        // Only return safe fields — never include the hashed password in a response
         res.status(200).json({
             _id: user._id,
             fullName: user.fullName,
@@ -85,6 +89,7 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
     try {
+        // Overwrite the cookie with an empty value and a zero maxAge to force the browser to delete it
         res.cookie("jwt", "", { maxAge: 0 });
         res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
@@ -99,10 +104,10 @@ export const updateProfile = async (req, res) => {
         const { profilePic } = req.body;
 
         if (!profilePic) {
-            return res.status(400).json({ message: "Profile picture is required" }); // fixed: added return
+            return res.status(400).json({ message: "Profile picture is required" });
         }
 
-        // Prevent SSRF: only accept base64 data URLs, never raw remote URLs
+        // Never accept a raw remote URL here — that would let attackers proxy requests through our server
         if (!isValidBase64Image(profilePic)) {
             return res.status(400).json({ message: "Invalid image format. Please upload a valid image." });
         }

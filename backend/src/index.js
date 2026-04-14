@@ -14,14 +14,14 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 
-// Security headers
+// Sets secure HTTP headers (X-Frame-Options, X-Content-Type-Options, etc.) on every response
 app.use(helmet());
 
-// JSON body limit (prevents huge base64 payload abuse)
+// Cap incoming JSON bodies at 10 MB — large enough for base64 images, small enough to block abuse
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
-// CORS
+// Allow the frontend origin to send cookies on cross-origin requests
 app.use(
     cors({
         origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -30,7 +30,7 @@ app.use(
     })
 );
 
-// Rate limiting on auth routes (brute-force protection)
+// Limit login and signup attempts to slow down brute-force attacks
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,                   // max 10 requests per window per IP
@@ -38,14 +38,17 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
     message: { message: "Too many requests, please try again later." },
 });
+// Apply the rate limiter to the two endpoints most likely to be targeted
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 
-// Routes
+// Mount routers
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 server.listen(PORT, () => {
     console.log("Server is running on PORT:" + PORT);
+    // Connect to the database after the server is ready, not before —
+    // this way the process stays alive even during a brief DB hiccup at startup
     connectDB();
 });

@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema(
         email: {
             type: String,
             required: true,
-            unique: true,
+            unique: true, // enforced at the database level to prevent duplicate accounts
         },
         fullName: {
             type: String,
@@ -14,18 +14,18 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: true,
-            minLength: 6,
+            minLength: 6, // also validated in the controller, but the schema acts as a safety net
         },
         profilePic: {
             type: String,
-            default: "",
+            default: "", // empty string means the frontend falls back to the default avatar
         },
         lastSeen: {
             type: Date,
-            default: Date.now,
+            default: Date.now, // initialised to creation time so new users don't show as "Long ago"
         },
     },
-    { timestamps: true }
+    { timestamps: true } // adds createdAt and updatedAt automatically
 );
 
 const User = mongoose.model("User", userSchema);

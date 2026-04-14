@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import { config } from "dotenv";
 
+// Call config() here so Cloudinary credentials are available regardless of import order
 config();
 
 cloudinary.config({
