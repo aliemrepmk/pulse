@@ -11,6 +11,8 @@ export const useChatStore = create((set, get) => ({
     editingMessage: null,
     isUsersLoading: false,
     isMessagesLoading: false,
+    // Tracks how many unread messages each contact has sent while their chat wasn't open
+    unreadCounts: {},
 
     getUsers: async () => {
         set({ isUsersLoading: true });
@@ -68,27 +70,59 @@ export const useChatStore = create((set, get) => ({
                 messages: state.messages.map((m) => 
                     (m.senderId === senderId && m.status !== "read") ? { ...m, status: "read" } : m
                 ),
+                // Clear the badge now that the user has read everything from this sender
+                unreadCounts: { ...state.unreadCounts, [senderId]: 0 },
             }));
         } catch (error) {
             console.error("Failed to mark messages as read:", error);
         }
     },
 
-    // Start listening for real-time message events for the currently open conversation.
-    // Must only be called after selectedUser is set, otherwise we'd process every
-    // incoming message regardless of who sent it.
+    // Fetches the initial unread count per sender so badges are accurate on first load
+    getUnreadCounts: async () => {
+        try {
+            const res = await axiosInstance.get("/messages/unread-counts");
+            set({ unreadCounts: res.data });
+        } catch (error) {
+            console.error("Failed to fetch unread counts:", error);
+        }
+    },
+
+    // Always-on handler for incoming messages — active for the entire session.
+    // Routes each message to either the open conversation or the unread counter,
+    // depending on whether its sender is the currently selected user.
+    subscribeToGlobalMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.on("newMessage", (newMessage) => {
+            const { selectedUser } = get();
+            if (selectedUser?._id === newMessage.senderId) {
+                // The chat with this person is open — add the message to the visible list
+                set({ messages: [...get().messages, newMessage] });
+            } else {
+                // Different conversation — bump the badge counter for that contact
+                set((state) => ({
+                    unreadCounts: {
+                        ...state.unreadCounts,
+                        [newMessage.senderId]: (state.unreadCounts[newMessage.senderId] || 0) + 1,
+                    },
+                }));
+            }
+        });
+    },
+
+    unsubscribeFromGlobalMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.off("newMessage");
+    },
+
+    // Start listening for conversation-specific events for the currently open chat.
+    // newMessage is intentionally excluded — it's handled globally by subscribeToGlobalMessages.
+    // Must only be called after selectedUser is set.
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if(!selectedUser) return;
 
         const socket = useAuthStore.getState().socket;
-        // Only add to the list if the message is from the person we're currently chatting with
-        socket.on("newMessage", (newMessage) => {
-            if(newMessage.senderId !== selectedUser._id) return;
-            set({ 
-                messages: [...get().messages, newMessage],
-            });
-        });
 
         // Handle in-place edits — update the matching message bubble without re-fetching
         socket.on("updateMessage", (updatedMessage) => {
@@ -122,10 +156,10 @@ export const useChatStore = create((set, get) => ({
         });
     },
 
-    // Tear down all message listeners when leaving the current conversation
+    // Tear down conversation-specific listeners when leaving the current chat
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
-        socket.off("newMessage");
+        // Note: newMessage is intentionally omitted — the global listener manages it
         socket.off("updateMessage");
         socket.off("messagesRead");
         socket.off("messagesDelivered");
@@ -176,5 +210,13 @@ export const useChatStore = create((set, get) => ({
     },
 
     setEditingMessage: (message) => set({ editingMessage: message }),
-    setSelectedUser: (selectedUser) => set({ selectedUser }),
+
+    // Clear the unread badge immediately when the user taps a contact
+    // so the counter disappears before markMessagesAsRead even finishes
+    setSelectedUser: (selectedUser) => set((state) => ({
+        selectedUser,
+        unreadCounts: selectedUser
+            ? { ...state.unreadCounts, [selectedUser._id]: 0 }
+            : state.unreadCounts,
+    })),
 }));

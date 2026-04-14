@@ -9,6 +9,7 @@ import ProfilePage from "./pages/ProfilePage";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
+import { useChatStore } from "./store/useChatStore";
 import { useEffect } from "react";
 
 import { Loader } from "lucide-react";
@@ -17,11 +18,20 @@ import { Toaster } from "react-hot-toast";
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
   const { theme } = useThemeStore();
+  const { subscribeToGlobalMessages, unsubscribeFromGlobalMessages, getUnreadCounts } = useChatStore();
 
   // Verify whether the user is already logged in as soon as the app loads
   useEffect(() => {
     checkAuth()
   }, [checkAuth]);
+
+  // Start the always-on message listener and load initial unread counts once we know the user is logged in
+  useEffect(() => {
+    if (!authUser) return;
+    subscribeToGlobalMessages();
+    getUnreadCounts();
+    return () => unsubscribeFromGlobalMessages();
+  }, [authUser]);
 
   // Don't render anything until we know the auth state — avoids a flash of the wrong page
   if(isCheckingAuth && !authUser) return (

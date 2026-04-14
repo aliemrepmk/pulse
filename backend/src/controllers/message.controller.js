@@ -148,3 +148,26 @@ export const markMessagesAsRead = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+// Returns the number of unread messages per sender for the logged-in user.
+// Shaped as { senderId: count } so the frontend can look up any contact instantly.
+export const getUnreadCounts = async (req, res) => {
+    try {
+        const receiverId = req.user._id;
+
+        const counts = await Message.aggregate([
+            { $match: { receiverId, status: { $ne: "read" } } },
+            { $group: { _id: "$senderId", count: { $sum: 1 } } },
+        ]);
+
+        const result = {};
+        counts.forEach(({ _id, count }) => {
+            result[_id.toString()] = count;
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.log("Error in getUnreadCounts controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

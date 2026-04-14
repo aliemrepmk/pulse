@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 import { formatLastSeen } from "../lib/utils";
 
 const Sidebar = () => {
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToUserStatus, unsubscribeFromUserStatus, subscribeToTypingStatus, unsubscribeFromTypingStatus } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToUserStatus, unsubscribeFromUserStatus, subscribeToTypingStatus, unsubscribeFromTypingStatus, unreadCounts } = useChatStore();
     const { onlineUsers } = useAuthStore();
     const [ showOnlineOnly, setShowOnlineOnly ] = useState(false);
 
@@ -73,14 +73,32 @@ const Sidebar = () => {
                             rounded-full ring-2 ring-zinc-900"
                             />
                         )}
+                        {/* Unread badge on the avatar — only visible on small screens where the name column is hidden */}
+                        {(unreadCounts[user._id] > 0) && (
+                            <span className="lg:hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1
+                                bg-red-500 text-white text-[10px] font-bold
+                                rounded-full flex items-center justify-center">
+                                {unreadCounts[user._id] > 99 ? "99+" : unreadCounts[user._id]}
+                            </span>
+                        )}
                     </div>
 
                     {/* Name and online/offline status — hidden on small screens where only the avatar fits */}
-                    <div className="hidden lg:block text-left min-w-0">
-                        <div className="font-medium truncate">{user.fullName}</div>
-                        <div className="text-sm text-zinc-400">
-                            {onlineUsers.includes(user._id) ? "Online" : (user.lastSeen ? `Last seen ${formatLastSeen(user.lastSeen).toLowerCase()}` : "Offline")}
+                    <div className="hidden lg:flex flex-1 items-center justify-between min-w-0">
+                        <div className="min-w-0">
+                            <div className="font-medium truncate">{user.fullName}</div>
+                            <div className="text-sm text-zinc-400">
+                                {onlineUsers.includes(user._id) ? "Online" : (user.lastSeen ? `Last seen ${formatLastSeen(user.lastSeen).toLowerCase()}` : "Offline")}
+                            </div>
                         </div>
+                        {/* Unread badge on large screens — shown next to the status text */}
+                        {(unreadCounts[user._id] > 0) && (
+                            <span className="ml-2 min-w-[20px] h-5 px-1.5
+                                bg-red-500 text-white text-xs font-bold
+                                rounded-full flex items-center justify-center shrink-0">
+                                {unreadCounts[user._id] > 99 ? "99+" : unreadCounts[user._id]}
+                            </span>
+                        )}
                     </div>
                 </button>
                 ))}
