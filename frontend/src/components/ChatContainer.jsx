@@ -12,8 +12,8 @@ const ChatContainer = () => {
     const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
-    // Tracks which message is waiting for delete-for-everyone confirmation
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    // Tracks which message and which delete mode is waiting for confirmation
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     // Load the conversation and start listening for new messages whenever the selected user changes
     useEffect(() => {
@@ -93,21 +93,30 @@ const ChatContainer = () => {
                             {/* Action buttons — hidden until hover, suppressed on already-deleted messages */}
                             {!message.deletedForEveryone && (
                                 <>
-                                    {confirmDeleteId === message._id ? (
-                                        // Inline confirmation so the user can't accidentally delete for everyone
+                                    {confirmDelete?.id === message._id ? (
+                                        // Inline confirmation — shown for both delete modes
                                         <span className="flex items-center gap-1 ml-1 text-[11px] opacity-80">
-                                            <span>Delete for everyone?</span>
+                                            <span>
+                                                {confirmDelete.type === 'everyone'
+                                                    ? 'Delete for everyone?'
+                                                    : 'Delete for you?'}
+                                            </span>
                                             <button
                                                 onClick={async () => {
-                                                    setConfirmDeleteId(null);
-                                                    await deleteMessageForEveryone(message._id);
+                                                    const { id, type } = confirmDelete;
+                                                    setConfirmDelete(null);
+                                                    if (type === 'everyone') {
+                                                        await deleteMessageForEveryone(id);
+                                                    } else {
+                                                        await deleteMessageForMe(id);
+                                                    }
                                                 }}
                                                 className="text-red-500 font-semibold hover:underline"
                                             >
                                                 Yes
                                             </button>
                                             <button
-                                                onClick={() => setConfirmDeleteId(null)}
+                                                onClick={() => setConfirmDelete(null)}
                                                 className="opacity-60 hover:opacity-100"
                                             >
                                                 No
@@ -127,7 +136,7 @@ const ChatContainer = () => {
                                             )}
                                             {/* Delete for me — available to both sender and recipient */}
                                             <button
-                                                onClick={() => deleteMessageForMe(message._id)}
+                                                onClick={() => setConfirmDelete({ id: message._id, type: 'me' })}
                                                 className="opacity-50 hover:opacity-100 transition-opacity"
                                                 title="Delete for me"
                                             >
@@ -136,7 +145,7 @@ const ChatContainer = () => {
                                             {/* Delete for everyone — sender only, triggers inline confirmation */}
                                             {message.senderId === authUser._id && (
                                                 <button
-                                                    onClick={() => setConfirmDeleteId(message._id)}
+                                                    onClick={() => setConfirmDelete({ id: message._id, type: 'everyone' })}
                                                     className="opacity-50 hover:!opacity-100 transition-opacity text-red-500"
                                                     title="Delete for everyone"
                                                 >
