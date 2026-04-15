@@ -78,6 +78,32 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    // Remove the message from the local list immediately, then tell the server
+    deleteMessageForMe: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/messages/delete-for-me/${messageId}`);
+            set((state) => ({
+                messages: state.messages.filter((m) => m._id !== messageId),
+            }));
+        } catch (error) {
+            toast.error(error.response?.data?.error || "Failed to delete message.");
+        }
+    },
+
+    // Flip the local bubble to "deleted" immediately, then persist on the server
+    deleteMessageForEveryone: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/messages/delete-for-everyone/${messageId}`);
+            set((state) => ({
+                messages: state.messages.map((m) =>
+                    m._id === messageId ? { ...m, deletedForEveryone: true } : m
+                ),
+            }));
+        } catch (error) {
+            toast.error(error.response?.data?.error || "Failed to delete message.");
+        }
+    },
+
     // Fetches the initial unread count per sender so badges are accurate on first load
     getUnreadCounts: async () => {
         try {
@@ -154,6 +180,15 @@ export const useChatStore = create((set, get) => ({
                 ),
             }));
         });
+
+        // The sender deleted this message for everyone — flip our bubble to "deleted" state
+        socket.on("messageDeletedForEveryone", ({ messageId }) => {
+            set((state) => ({
+                messages: state.messages.map((m) =>
+                    m._id === messageId ? { ...m, deletedForEveryone: true } : m
+                ),
+            }));
+        });
     },
 
     // Tear down conversation-specific listeners when leaving the current chat
@@ -163,6 +198,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("updateMessage");
         socket.off("messagesRead");
         socket.off("messagesDelivered");
+        socket.off("messageDeletedForEveryone");
     },
 
     // Keep the contact list up to date when someone goes offline

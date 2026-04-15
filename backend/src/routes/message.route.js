@@ -1,6 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middleware/auth.middleware.js";
-import { getUsersForSidebar, getMessages, sendMessage, editMessage, markMessagesAsRead, getUnreadCounts } from "../controllers/message.controller.js";
+import { getUsersForSidebar, getMessages, sendMessage, editMessage, markMessagesAsRead, getUnreadCounts, deleteMessageForMe, deleteMessageForEveryone } from "../controllers/message.controller.js";
 
 const router = express.Router();
 
@@ -14,5 +14,7 @@ router.get("/:id", protectRoute, getMessages);            // full conversation w
 router.post("/send/:id", protectRoute, sendMessage);
 router.put("/edit/:id", protectRoute, editMessage);
 router.put("/mark-read/:senderId", protectRoute, markMessagesAsRead); // called when the recipient opens the chat
+router.delete("/delete-for-me/:id", protectRoute, deleteMessageForMe);
+router.delete("/delete-for-everyone/:id", protectRoute, deleteMessageForEveryone);
 
 export default router;

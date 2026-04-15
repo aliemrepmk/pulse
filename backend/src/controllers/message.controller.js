@@ -30,6 +30,8 @@ export const getMessages = async (req, res) => {
                 { senderId: myId, receiverId: userToChatId },
                 { senderId: userToChatId, receiverId: myId },
             ],
+            // Never return messages the requesting user has locally deleted
+            deletedFor: { $nin: [myId] },
         });
 
         res.status(200).json(messages);
@@ -168,6 +170,66 @@ export const getUnreadCounts = async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.log("Error in getUnreadCounts controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Hides the message only for the requesting user — the other side is unaffected.
+// Available to both the sender and the recipient.
+export const deleteMessageForMe = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ error: "Message not found" });
+
+        // Verify the caller is actually part of this conversation
+        const isParticipant =
+            message.senderId.toString() === userId.toString() ||
+            message.receiverId.toString() === userId.toString();
+        if (!isParticipant) {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        // $addToSet prevents duplicate IDs if the endpoint is somehow called twice
+        await Message.findByIdAndUpdate(messageId, { $addToSet: { deletedFor: userId } });
+
+        // No socket event needed — this change only affects the requesting user's view
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.log("Error in deleteMessageForMe controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Marks the message as deleted for everyone. The document is kept in the database
+// so both sides see "This message was deleted" rather than an empty gap.
+// Only the original sender can do this.
+export const deleteMessageForEveryone = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ error: "Message not found" });
+
+        if (message.senderId.toString() !== userId.toString()) {
+            return res.status(403).json({ error: "Unauthorized to delete this message for everyone" });
+        }
+
+        message.deletedForEveryone = true;
+        await message.save();
+
+        // Tell the recipient to update the bubble on their end immediately
+        const receiverSocketId = getReceiverSocketId(message.receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("messageDeletedForEveryone", { messageId });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.log("Error in deleteMessageForEveryone controller: " + error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

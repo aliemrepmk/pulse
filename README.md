@@ -184,7 +184,7 @@ pulse/
 - [x] **Message Editing:** Modify sent messages with an `(edited)` live sync.
 - [x] **Read Receipts (Message Status):** 3-tier checking system (`Sent`, `Delivered`, `Read`).
 - [x] **Sidebar Unread Counters:** Displaying numeric red badges `(3)` next to offline alerts.
-- [ ] **Delete Messages:** Local and global database message deletion endpoints.
+- [x] **Delete Messages:** Local and global database message deletion endpoints.
 - [ ] **Message Pagination / Infinite Scroll:** Fetching older messages incrementally to save resources.
 - [ ] **Reply Targeting:** Anchor a reply contextually to a specific previous message.
 - [ ] **Emoji Reactions:** Interactive bubble reactions.

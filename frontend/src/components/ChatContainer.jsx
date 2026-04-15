@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Pencil, Check, CheckCheck } from "lucide-react";
+import { Pencil, Check, CheckCheck, Trash2 } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -9,9 +9,11 @@ import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
-    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead } = useChatStore();
+    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
+    // Tracks which message is waiting for delete-for-everyone confirmation
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     // Load the conversation and start listening for new messages whenever the selected user changes
     useEffect(() => {
@@ -72,7 +74,7 @@ const ChatContainer = () => {
                             <time className="text-xs opacity-50 ml-1">
                                 {formatMessageTime(message.createdAt)}
                             </time>
-                            {message.isEdited && (
+                            {message.isEdited && !message.deletedForEveryone && (
                                 <span className="text-[10px] opacity-40 italic mt-0.5">(edited)</span>
                             )}
                             {/* Green double-check = read, grey double-check = delivered, single-check = sent */}
@@ -87,27 +89,82 @@ const ChatContainer = () => {
                                     )}
                                 </span>
                             )}
-                            {/* Edit button stays hidden until the user hovers over the message */}
-                            {message.senderId === authUser._id && (
-                                <button 
-                                    onClick={() => setEditingMessage(message)}
-                                    className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity ml-1"
-                                    title="Edit message"
-                                >
-                                    <Pencil size={12} />
-                                </button>
+
+                            {/* Action buttons — hidden until hover, suppressed on already-deleted messages */}
+                            {!message.deletedForEveryone && (
+                                <>
+                                    {confirmDeleteId === message._id ? (
+                                        // Inline confirmation so the user can't accidentally delete for everyone
+                                        <span className="flex items-center gap-1 ml-1 text-[11px] opacity-80">
+                                            <span>Delete for everyone?</span>
+                                            <button
+                                                onClick={async () => {
+                                                    setConfirmDeleteId(null);
+                                                    await deleteMessageForEveryone(message._id);
+                                                }}
+                                                className="text-red-500 font-semibold hover:underline"
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmDeleteId(null)}
+                                                className="opacity-60 hover:opacity-100"
+                                            >
+                                                No
+                                            </button>
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                            {/* Edit — only for own text messages */}
+                                            {message.senderId === authUser._id && message.text && (
+                                                <button
+                                                    onClick={() => setEditingMessage(message)}
+                                                    className="opacity-50 hover:opacity-100 transition-opacity"
+                                                    title="Edit message"
+                                                >
+                                                    <Pencil size={12} />
+                                                </button>
+                                            )}
+                                            {/* Delete for me — available to both sender and recipient */}
+                                            <button
+                                                onClick={() => deleteMessageForMe(message._id)}
+                                                className="opacity-50 hover:opacity-100 transition-opacity"
+                                                title="Delete for me"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                            {/* Delete for everyone — sender only, triggers inline confirmation */}
+                                            {message.senderId === authUser._id && (
+                                                <button
+                                                    onClick={() => setConfirmDeleteId(message._id)}
+                                                    className="opacity-50 hover:!opacity-100 transition-opacity text-red-500"
+                                                    title="Delete for everyone"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            )}
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </div>
 
                         <div className="chat-bubble flex flex-col">
-                            {message.image && (
-                                <img
-                                    src={message.image}
-                                    alt="Attachment"
-                                    className="sm:max-w-[200px] rounded-md mb-2"
-                                />
+                            {message.deletedForEveryone ? (
+                                // WhatsApp-style placeholder shown to both sides after delete-for-everyone
+                                <p className="italic opacity-50 text-sm">This message was deleted</p>
+                            ) : (
+                                <>
+                                    {message.image && (
+                                        <img
+                                            src={message.image}
+                                            alt="Attachment"
+                                            className="sm:max-w-[200px] rounded-md mb-2"
+                                        />
+                                    )}
+                                    {message.text && <p>{message.text}</p>}
+                                </>
                             )}
-                            {message.text && <p>{message.text}</p>}
                         </div>
                     </div>
                 ))}
