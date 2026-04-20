@@ -2,6 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from  "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
+import { showNotification } from "../lib/notifications";
 
 export const useChatStore = create((set, get) => ({
     messages: [],
@@ -133,8 +134,15 @@ export const useChatStore = create((set, get) => ({
                     },
                 }));
             }
+
+            // Notify whenever the tab is hidden — regardless of which chat is open,
+            // the user can't see arriving messages if they've switched away from the tab
+            if (document.hidden) {
+                showNotification("Pulse", "New message");
+            }
         });
     },
+
 
     unsubscribeFromGlobalMessages: () => {
         const socket = useAuthStore.getState().socket;

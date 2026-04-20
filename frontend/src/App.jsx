@@ -10,6 +10,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useChatStore } from "./store/useChatStore";
+import { requestNotificationPermission } from "./lib/notifications";
 import { useEffect } from "react";
 
 import { Loader } from "lucide-react";
@@ -30,6 +31,8 @@ const App = () => {
     if (!authUser) return;
     subscribeToGlobalMessages();
     getUnreadCounts();
+    // Ask for notification permission right after login so the user knows why we're asking
+    requestNotificationPermission();
     return () => unsubscribeFromGlobalMessages();
   }, [authUser]);
 
