@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
-import { axiosInstance } from  "../lib/axios";
+import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 import { showNotification } from "../lib/notifications";
 
@@ -68,7 +68,7 @@ export const useChatStore = create((set, get) => ({
         try {
             await axiosInstance.put(`/messages/mark-read/${senderId}`);
             set((state) => ({
-                messages: state.messages.map((m) => 
+                messages: state.messages.map((m) =>
                     (m.senderId === senderId && m.status !== "read") ? { ...m, status: "read" } : m
                 ),
                 // Clear the badge now that the user has read everything from this sender
@@ -138,7 +138,24 @@ export const useChatStore = create((set, get) => ({
             // Notify whenever the tab is hidden — regardless of which chat is open,
             // the user can't see arriving messages if they've switched away from the tab
             if (document.hidden) {
-                showNotification("Pulse", "New message");
+                const sender = get().users.find((u) => u._id === newMessage.senderId);
+
+                const title = sender?.fullName ?? "New message";
+
+                const body = newMessage.deletedForEveryone
+                    ? "This message was deleted"
+                    : newMessage.text
+                        ? newMessage.text.length > 60
+                            ? newMessage.text.slice(0, 60) + "…"
+                            : newMessage.text
+                        : "Sent an image";
+
+                const icon = sender?.profilePic || "/avatar.png";
+
+                // Clicking the notification selects that user's conversation
+                showNotification(title, body, icon, () => {
+                    if (sender) get().setSelectedUser(sender);
+                });
             }
         });
     },
@@ -154,13 +171,13 @@ export const useChatStore = create((set, get) => ({
     // Must only be called after selectedUser is set.
     subscribeToMessages: () => {
         const { selectedUser } = get();
-        if(!selectedUser) return;
+        if (!selectedUser) return;
 
         const socket = useAuthStore.getState().socket;
 
         // Handle in-place edits — update the matching message bubble without re-fetching
         socket.on("updateMessage", (updatedMessage) => {
-            if(updatedMessage.senderId !== selectedUser._id && updatedMessage.receiverId !== selectedUser._id) return;
+            if (updatedMessage.senderId !== selectedUser._id && updatedMessage.receiverId !== selectedUser._id) return;
             set({
                 messages: get().messages.map((m) => m._id === updatedMessage._id ? updatedMessage : m),
             });
@@ -169,9 +186,9 @@ export const useChatStore = create((set, get) => ({
         // The other person opened our conversation — flip our sent messages to "read"
         socket.on("messagesRead", ({ senderId, receiverId }) => {
             set((state) => ({
-                messages: state.messages.map((m) => 
-                    (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status !== "read") 
-                        ? { ...m, status: "read" } 
+                messages: state.messages.map((m) =>
+                    (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status !== "read")
+                        ? { ...m, status: "read" }
                         : m
                 ),
             }));
@@ -180,7 +197,7 @@ export const useChatStore = create((set, get) => ({
         // The other person came online and picked up our messages — upgrade "sent" to "delivered"
         socket.on("messagesDelivered", ({ receiverId }) => {
             set((state) => ({
-                messages: state.messages.map((m) => 
+                messages: state.messages.map((m) =>
                     // If we sent it and it hasn't been read yet, mark it as delivered
                     (m.senderId === useAuthStore.getState().authUser?._id && m.receiverId === receiverId && m.status === "sent")
                         ? { ...m, status: "delivered" }
@@ -214,11 +231,11 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
         socket.on("userWentOffline", ({ userId, lastSeen }) => {
             set((state) => ({
-                users: state.users.map((user) => 
+                users: state.users.map((user) =>
                     user._id === userId ? { ...user, lastSeen } : user
                 ),
-                selectedUser: state.selectedUser?._id === userId 
-                    ? { ...state.selectedUser, lastSeen } 
+                selectedUser: state.selectedUser?._id === userId
+                    ? { ...state.selectedUser, lastSeen }
                     : state.selectedUser,
             }));
         });
@@ -234,8 +251,8 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
         socket.on("typing", ({ userId }) => {
             set((state) => ({
-                typingUsers: state.typingUsers.includes(userId) 
-                    ? state.typingUsers 
+                typingUsers: state.typingUsers.includes(userId)
+                    ? state.typingUsers
                     : [...state.typingUsers, userId],
             }));
         });
