@@ -185,10 +185,23 @@ pulse/
 - [x] **Read Receipts (Message Status):** 3-tier checking system (`Sent`, `Delivered`, `Read`).
 - [x] **Sidebar Unread Counters:** Displaying numeric red badges `(3)` next to offline alerts.
 - [x] **Delete Messages:** Local and global database message deletion endpoints.
-- [ ] **Message Pagination / Infinite Scroll:** Fetching older messages incrementally to save resources.
 - [x] **Reply Targeting:** Anchor a reply contextually to a specific previous message.
-- [ ] **Emoji Reactions:** Interactive bubble reactions.
 - [x] **Push Notifications:** Native OS notifications for backgrounded browser tabs.
+- [ ] **Message Pagination / Infinite Scroll:** Fetching older messages incrementally to save resources.
+- [ ] **Emoji Reactions:** Interactive bubble reactions.
 - [ ] **Group Chats:** Expanding the underlying schema to support multi-user threads.
+
+**Future Ideas**
+
+- [ ] **Link Previews:** Auto-generate title and thumbnail cards for pasted URLs.
+- [ ] **Message Pinning:** Pin important messages to the top of a conversation.
+- [ ] **Media Gallery:** A scrollable grid of all images shared in a conversation.
+- [ ] **Message Forwarding:** Forward a message to another contact.
+- [ ] **User Blocking:** Prevent specific users from sending messages.
+- [ ] **Contact Requests:** Send and accept contact requests instead of seeing every registered user.
+- [ ] **Two-Factor Authentication (2FA):** TOTP-based second factor on login.
+- [ ] **File Sharing:** Send PDFs and documents in addition to images.
+- [ ] **Status / Stories:** 24-hour disappearing status updates.
+- [ ] **Voice / Video Calls:** WebRTC-based real-time calls.
 
 ---
