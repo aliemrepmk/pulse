@@ -193,7 +193,7 @@ const ChatContainer = () => {
                             ) : (
                                 <>
                                     {/* Quote preview of the replied-to message — clicking scrolls to the original */}
-                                    {message.replyTo && (
+                                    {message.replyTo?.messageId && (
                                         <div
                                             onClick={() => scrollToMessage(message.replyTo.messageId)}
                                             className="cursor-pointer mb-2 px-2 py-1 rounded
