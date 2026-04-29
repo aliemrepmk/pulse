@@ -14,6 +14,8 @@ export const useChatStore = create((set, get) => ({
     isMessagesLoading: false,
     // Tracks how many unread messages each contact has sent while their chat wasn't open
     unreadCounts: {},
+    // The message the user is currently composing a reply to
+    replyingTo: null,
 
     getUsers: async () => {
         set({ isUsersLoading: true });
@@ -41,10 +43,19 @@ export const useChatStore = create((set, get) => ({
     },
 
     sendMessage: async (messageData) => {
-        const { selectedUser, messages } = get();
+        const { selectedUser, messages, replyingTo } = get();
         try {
-            const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-            set({ messages: [...messages, res.data] });
+            const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
+                ...messageData,
+                // Attach the reply snapshot if the user is replying to a specific message
+                replyTo: replyingTo
+                    ? {
+                        messageId: replyingTo._id,
+                        senderName: replyingTo.senderName, // resolved by the UI before calling this
+                    }
+                    : null,
+            });
+            set({ messages: [...messages, res.data], replyingTo: null });
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to send message.");
         }
@@ -272,10 +283,13 @@ export const useChatStore = create((set, get) => ({
 
     setEditingMessage: (message) => set({ editingMessage: message }),
 
-    // Clear the unread badge immediately when the user taps a contact
-    // so the counter disappears before markMessagesAsRead even finishes
+    setReplyingTo: (message) => set({ replyingTo: message }),
+    clearReplyingTo: () => set({ replyingTo: null }),
+
+    // Clear the unread badge and any pending reply when the user switches conversations
     setSelectedUser: (selectedUser) => set((state) => ({
         selectedUser,
+        replyingTo: null,
         unreadCounts: selectedUser
             ? { ...state.unreadCounts, [selectedUser._id]: 0 }
             : state.unreadCounts,

@@ -186,9 +186,9 @@ pulse/
 - [x] **Sidebar Unread Counters:** Displaying numeric red badges `(3)` next to offline alerts.
 - [x] **Delete Messages:** Local and global database message deletion endpoints.
 - [ ] **Message Pagination / Infinite Scroll:** Fetching older messages incrementally to save resources.
-- [ ] **Reply Targeting:** Anchor a reply contextually to a specific previous message.
+- [x] **Reply Targeting:** Anchor a reply contextually to a specific previous message.
 - [ ] **Emoji Reactions:** Interactive bubble reactions.
-- [ ] **Push Notifications:** Native OS notifications for backgrounded browser tabs.
+- [x] **Push Notifications:** Native OS notifications for backgrounded browser tabs.
 - [ ] **Group Chats:** Expanding the underlying schema to support multi-user threads.
 
 ---

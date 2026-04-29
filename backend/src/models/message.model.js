@@ -39,6 +39,14 @@ const messageSchema = new mongoose.Schema(
             type: Boolean,
             default: false, // true = bubble stays but shows "This message was deleted" on both sides
         },
+        replyTo: {
+            messageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+            senderId:  { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            // Snapshot fields so the preview still renders even if the original is later deleted
+            senderName: { type: String },
+            text: { type: String },          // first 80 chars of original text; null if image-only
+            isImage: { type: Boolean, default: false }, // true if the original message had an image
+        },
     },
     { timestamps: true } // createdAt is used as the message timestamp in the UI
 );

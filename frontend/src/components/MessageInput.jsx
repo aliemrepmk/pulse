@@ -9,8 +9,8 @@ const MessageInput = () => {
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
     const typingTimeoutRef = useRef(null);
-    const { sendMessage, editMessage, selectedUser, editingMessage, setEditingMessage } = useChatStore();
-    const { socket } = useAuthStore();
+    const { sendMessage, editMessage, selectedUser, editingMessage, setEditingMessage, replyingTo, clearReplyingTo } = useChatStore();
+    const { socket, authUser } = useAuthStore();
 
     // When the user clicks edit on a message, pre-fill the input with its current text
     // and clear any image preview so the editing state is clean
@@ -18,6 +18,8 @@ const MessageInput = () => {
         if (editingMessage) {
             setText(editingMessage.text || "");
             setImagePreview(null);
+            // Editing and replying are mutually exclusive — dismiss the reply banner if active
+            clearReplyingTo();
         } else {
             setText("");
         }
@@ -100,6 +102,25 @@ const MessageInput = () => {
 
     return (
         <div className="p-4 w-full relative">
+          {/* Banner that appears above the input when the user is replying to a message */}
+          {replyingTo && !editingMessage && (
+            <div className="absolute -top-12 left-4 right-4 flex items-center justify-between
+                            text-xs bg-base-300 px-3 py-1.5 rounded-t-lg
+                            border-l-2 border-primary">
+                <div className="min-w-0">
+                    <span className="font-semibold text-base-content">
+                        Replying to {replyingTo.senderId === authUser._id ? "yourself" : selectedUser.fullName}
+                    </span>
+                    <p className="truncate text-zinc-400">
+                        {replyingTo.image && !replyingTo.text ? "📎 Image" : replyingTo.text}
+                    </p>
+                </div>
+                <button type="button" onClick={clearReplyingTo}
+                        className="ml-2 shrink-0 text-zinc-400 hover:text-base-content">
+                    Cancel
+                </button>
+            </div>
+          )}
           {/* Banner that appears above the input when the user is editing an existing message */}
           {editingMessage && (
             <div className="absolute -top-6 left-4 right-4 flex items-center justify-between text-xs text-zinc-400 bg-base-300 px-3 py-1 rounded-t-lg">

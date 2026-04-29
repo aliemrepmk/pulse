@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Pencil, Check, CheckCheck, Trash2 } from "lucide-react";
+import { Pencil, Check, CheckCheck, Trash2, Reply } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -9,11 +9,18 @@ import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
-    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone } = useChatStore();
+    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone, setReplyingTo } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
     // Tracks which message and which delete mode is waiting for confirmation
     const [confirmDelete, setConfirmDelete] = useState(null);
+    // Stores a DOM ref for each rendered message bubble, keyed by message._id
+    const messageRefsMap = useRef(new Map());
+
+    const scrollToMessage = (messageId) => {
+        const el = messageRefsMap.current.get(messageId?.toString());
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
 
     // Load the conversation and start listening for new messages whenever the selected user changes
     useEffect(() => {
@@ -56,7 +63,14 @@ const ChatContainer = () => {
       
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
-                    <div key={message._id} className={`chat group ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}>
+                    <div
+                        key={message._id}
+                        ref={(el) => el
+                            ? messageRefsMap.current.set(message._id.toString(), el)
+                            : messageRefsMap.current.delete(message._id.toString())
+                        }
+                        className={`chat group ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
+                    >
                         <div className=" chat-image avatar">
                             <div className="size-10 rounded-full border">
                                 <img
@@ -124,6 +138,20 @@ const ChatContainer = () => {
                                         </span>
                                     ) : (
                                         <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                            {/* Reply — available to both sender and recipient */}
+                                            <button
+                                                onClick={() => setReplyingTo({
+                                                    ...message,
+                                                    // Pre-resolve the display name so the banner shows it instantly
+                                                    senderName: message.senderId === authUser._id
+                                                        ? authUser.fullName
+                                                        : selectedUser.fullName,
+                                                })}
+                                                className="opacity-50 hover:opacity-100 transition-opacity"
+                                                title="Reply"
+                                            >
+                                                <Reply size={12} />
+                                            </button>
                                             {/* Edit — only for own text messages */}
                                             {message.senderId === authUser._id && message.text && (
                                                 <button
@@ -164,6 +192,22 @@ const ChatContainer = () => {
                                 <p className="italic opacity-50 text-sm">This message was deleted</p>
                             ) : (
                                 <>
+                                    {/* Quote preview of the replied-to message — clicking scrolls to the original */}
+                                    {message.replyTo && (
+                                        <div
+                                            onClick={() => scrollToMessage(message.replyTo.messageId)}
+                                            className="cursor-pointer mb-2 px-2 py-1 rounded
+                                                       bg-black/10 border-l-2 border-base-content/40
+                                                       text-xs opacity-75 hover:opacity-100 transition-opacity"
+                                        >
+                                            <p className="font-semibold truncate">{message.replyTo.senderName}</p>
+                                            <p className="truncate">
+                                                {message.replyTo.isImage && !message.replyTo.text
+                                                    ? "📎 Image"
+                                                    : message.replyTo.text ?? ""}
+                                            </p>
+                                        </div>
+                                    )}
                                     {message.image && (
                                         <img
                                             src={message.image}

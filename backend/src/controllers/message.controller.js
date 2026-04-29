@@ -43,7 +43,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image } = req.body;
+        const { text, image, replyTo } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -65,6 +65,21 @@ export const sendMessage = async (req, res) => {
             imageUrl = uploadResponse.secure_url;
         }
 
+        // Build a snapshot of the replied-to message so the preview survives future deletions
+        let replyToSnapshot = null;
+        if (replyTo?.messageId) {
+            const original = await Message.findById(replyTo.messageId);
+            if (original) {
+                replyToSnapshot = {
+                    messageId:  original._id,
+                    senderId:   original.senderId,
+                    senderName: replyTo.senderName,  // provided by the client from local state
+                    text: original.text ? original.text.slice(0, 80) : null,
+                    isImage: !!original.image,
+                };
+            }
+        }
+
         const receiverSocketId = getReceiverSocketId(receiverId);
 
         // If the recipient is currently online, set status to "delivered" right away;
@@ -75,6 +90,7 @@ export const sendMessage = async (req, res) => {
             text: text?.trim(),
             image: imageUrl,
             status: receiverSocketId ? "delivered" : "sent",
+            replyTo: replyToSnapshot,
         });
 
         await newMessage.save();
