@@ -1,15 +1,26 @@
 import { useState } from "react";
 import { X, Images } from "lucide-react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { formatLastSeen } from "../lib/utils";
 import MediaGallery from "./MediaGallery";
 
 const ChatHeader = () => {
-    const { selectedUser, setSelectedUser, typingUsers } = useChatStore();
+    const { selectedUser, setSelectedUser, typingUsers, messages } = useChatStore();
     const { onlineUsers } = useAuthStore();
-    // Controls whether the shared media gallery is visible over the chat
     const [galleryOpen, setGalleryOpen] = useState(false);
+
+    // Check upfront so the button can give feedback instead of opening an empty lightbox
+    const imageCount = messages.filter((m) => m.image && !m.deletedForEveryone).length;
+
+    const handleOpenGallery = () => {
+        if (imageCount === 0) {
+            toast("No photos shared yet", { icon: "🖼️" });
+            return;
+        }
+        setGalleryOpen(true);
+    };
 
     return (
         <>
@@ -40,11 +51,11 @@ const ChatHeader = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
-                        {/* Opens the shared media gallery for this conversation */}
+                        {/* Gallery button — shows a toast instead of opening if no images exist yet */}
                         <button
-                            onClick={() => setGalleryOpen(true)}
+                            onClick={handleOpenGallery}
                             className="btn btn-ghost btn-sm btn-circle"
-                            title="View shared media"
+                            title={imageCount > 0 ? `View ${imageCount} shared photos` : "No photos shared yet"}
                         >
                             <Images size={18} />
                         </button>
@@ -57,7 +68,7 @@ const ChatHeader = () => {
                 </div>
             </div>
 
-            {/* Gallery mounts here so it's scoped to the open conversation */}
+            {/* YARL manages its own open/close animation so AnimatePresence isn't needed here */}
             {galleryOpen && <MediaGallery onClose={() => setGalleryOpen(false)} />}
         </>
     );
