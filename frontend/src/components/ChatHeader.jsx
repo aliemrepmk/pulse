@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { X, Images } from "lucide-react";
-import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { formatLastSeen } from "../lib/utils";
@@ -10,17 +9,6 @@ const ChatHeader = () => {
     const { selectedUser, setSelectedUser, typingUsers, messages } = useChatStore();
     const { onlineUsers } = useAuthStore();
     const [galleryOpen, setGalleryOpen] = useState(false);
-
-    // Check upfront so the button can give feedback instead of opening an empty lightbox
-    const imageCount = messages.filter((m) => m.image && !m.deletedForEveryone).length;
-
-    const handleOpenGallery = () => {
-        if (imageCount === 0) {
-            toast("No photos shared yet", { icon: "🖼️" });
-            return;
-        }
-        setGalleryOpen(true);
-    };
 
     return (
         <>
@@ -51,11 +39,11 @@ const ChatHeader = () => {
                     </div>
 
                     <div className="flex items-center gap-1">
-                        {/* Gallery button — shows a toast instead of opening if no images exist yet */}
+                        {/* Gallery button — always opens; empty state is handled inside MediaGallery */}
                         <button
-                            onClick={handleOpenGallery}
+                            onClick={() => setGalleryOpen(true)}
                             className="btn btn-ghost btn-sm btn-circle"
-                            title={imageCount > 0 ? `View ${imageCount} shared photos` : "No photos shared yet"}
+                            title="View shared media"
                         >
                             <Images size={18} />
                         </button>
