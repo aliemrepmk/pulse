@@ -82,6 +82,14 @@ const ChatContainer = () => {
                                 : pinnedMessage.text}
                         </p>
                     </div>
+                    {/* Thumbnail preview — only shown for image messages */}
+                    {pinnedMessage.image && (
+                        <img
+                            src={pinnedMessage.image}
+                            alt="Pinned"
+                            className="size-9 rounded object-cover shrink-0 opacity-90"
+                        />
+                    )}
                 </div>
             )}
       
