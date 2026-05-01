@@ -74,6 +74,23 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    togglePinMessage: async (messageId) => {
+        try {
+            const res = await axiosInstance.put(`/messages/pin/${messageId}`);
+            const { isPinned } = res.data;
+            set((state) => ({
+                messages: state.messages.map((m) =>
+                    m._id === messageId
+                        ? { ...m, isPinned }
+                        // When pinning a new message, clear any other existing pin locally
+                        : { ...m, isPinned: isPinned ? false : m.isPinned }
+                ),
+            }));
+        } catch (error) {
+            toast.error("Failed to update pin.");
+        }
+    },
+
     // Flip every sent/delivered message from this sender to "read" and update local state
     markMessagesAsRead: async (senderId) => {
         try {
@@ -225,6 +242,17 @@ export const useChatStore = create((set, get) => ({
                 ),
             }));
         });
+
+        // Someone pinned or unpinned a message — update the banner without re-fetching
+        socket.on("messagePinToggled", ({ messageId, isPinned }) => {
+            set((state) => ({
+                messages: state.messages.map((m) =>
+                    m._id === messageId
+                        ? { ...m, isPinned }
+                        : { ...m, isPinned: isPinned ? false : m.isPinned }
+                ),
+            }));
+        });
     },
 
     // Tear down conversation-specific listeners when leaving the current chat
@@ -235,6 +263,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("messagesRead");
         socket.off("messagesDelivered");
         socket.off("messageDeletedForEveryone");
+        socket.off("messagePinToggled");
     },
 
     // Keep the contact list up to date when someone goes offline

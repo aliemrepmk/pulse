@@ -194,7 +194,7 @@ pulse/
 **Future Ideas**
 
 - [ ] **Link Previews:** Auto-generate title and thumbnail cards for pasted URLs.
-- [ ] **Message Pinning:** Pin important messages to the top of a conversation.
+- [x] **Message Pinning:** Pin important messages to the top of a conversation.
 - [x] **Media Gallery:** A scrollable grid of all images shared in a conversation.
 - [ ] **Message Forwarding:** Forward a message to another contact.
 - [ ] **User Blocking:** Prevent specific users from sending messages.

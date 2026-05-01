@@ -249,3 +249,56 @@ export const deleteMessageForEveryone = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+// Toggles the pinned state of a message. If pinning, any existing pin in this
+// conversation is cleared first so there is always at most one pin per conversation.
+// Both participants can pin and unpin.
+export const togglePinMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ error: "Message not found" });
+
+        // Verify the requester is a participant in this conversation
+        const isParticipant =
+            message.senderId.toString() === userId.toString() ||
+            message.receiverId.toString() === userId.toString();
+        if (!isParticipant) return res.status(403).json({ error: "Not allowed." });
+
+        const newPinnedState = !message.isPinned;
+
+        if (newPinnedState) {
+            // Clear any existing pin in this conversation so there is only ever one
+            await Message.updateMany(
+                {
+                    isPinned: true,
+                    $or: [
+                        { senderId: message.senderId, receiverId: message.receiverId },
+                        { senderId: message.receiverId, receiverId: message.senderId },
+                    ],
+                },
+                { $set: { isPinned: false } }
+            );
+        }
+
+        message.isPinned = newPinnedState;
+        await message.save();
+
+        // Notify the other participant so their banner updates in real time
+        const otherId = message.senderId.equals(userId) ? message.receiverId : message.senderId;
+        const otherSocketId = getReceiverSocketId(otherId.toString());
+        if (otherSocketId) {
+            io.to(otherSocketId).emit("messagePinToggled", {
+                messageId: message._id,
+                isPinned: newPinnedState,
+            });
+        }
+
+        res.status(200).json({ messageId: message._id, isPinned: newPinnedState });
+    } catch (error) {
+        console.log("Error in togglePinMessage controller: " + error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

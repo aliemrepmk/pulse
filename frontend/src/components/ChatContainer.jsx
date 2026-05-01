@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Pencil, Check, CheckCheck, Trash2, Reply } from "lucide-react";
+import { Pencil, Check, CheckCheck, Trash2, Reply, Pin, PinOff } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -9,7 +9,7 @@ import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
-    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone, setReplyingTo } = useChatStore();
+    const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, setEditingMessage, markMessagesAsRead, deleteMessageForMe, deleteMessageForEveryone, setReplyingTo, togglePinMessage } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
     // Tracks which message and which delete mode is waiting for confirmation
@@ -21,6 +21,9 @@ const ChatContainer = () => {
         const el = messageRefsMap.current.get(messageId?.toString());
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
+
+    // The pinned message for this conversation — at most one will have isPinned: true
+    const pinnedMessage = messages.find((m) => m.isPinned);
 
     // Load the conversation and start listening for new messages whenever the selected user changes
     useEffect(() => {
@@ -60,6 +63,27 @@ const ChatContainer = () => {
     return (
         <div className="flex-1 flex flex-col overflow-auto">
             <ChatHeader />
+
+            {/* Pinned message banner — derived from messages array, no extra fetch */}
+            {pinnedMessage && (
+                <div
+                    onClick={() => scrollToMessage(pinnedMessage._id)}
+                    className="flex items-center gap-2 px-4 py-2 border-b border-base-300
+                               bg-base-200 cursor-pointer hover:bg-base-300 transition-colors shrink-0"
+                >
+                    <Pin size={13} className="shrink-0 text-base-content/50" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-base-content/50 uppercase tracking-wide leading-none mb-0.5">
+                            Pinned Message
+                        </p>
+                        <p className="text-sm truncate">
+                            {pinnedMessage.image && !pinnedMessage.text
+                                ? "📎 Image"
+                                : pinnedMessage.text}
+                        </p>
+                    </div>
+                </div>
+            )}
       
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
@@ -142,7 +166,6 @@ const ChatContainer = () => {
                                             <button
                                                 onClick={() => setReplyingTo({
                                                     ...message,
-                                                    // Pre-resolve the display name so the banner shows it instantly
                                                     senderName: message.senderId === authUser._id
                                                         ? authUser.fullName
                                                         : selectedUser.fullName,
@@ -151,6 +174,14 @@ const ChatContainer = () => {
                                                 title="Reply"
                                             >
                                                 <Reply size={12} />
+                                            </button>
+                                            {/* Pin / Unpin — available to both participants */}
+                                            <button
+                                                onClick={() => togglePinMessage(message._id)}
+                                                className="opacity-50 hover:opacity-100 transition-opacity"
+                                                title={message.isPinned ? "Unpin message" : "Pin message"}
+                                            >
+                                                {message.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
                                             </button>
                                             {/* Edit — only for own text messages */}
                                             {message.senderId === authUser._id && message.text && (

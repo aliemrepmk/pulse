@@ -47,6 +47,10 @@ const messageSchema = new mongoose.Schema(
             text: { type: String },          // first 80 chars of original text; null if image-only
             isImage: { type: Boolean, default: false }, // true if the original message had an image
         },
+        isPinned: {
+            type: Boolean,
+            default: false, // at most one message per conversation has this set to true
+        },
     },
     { timestamps: true } // createdAt is used as the message timestamp in the UI
 );
